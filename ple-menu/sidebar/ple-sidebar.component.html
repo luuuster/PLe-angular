@@ -1,0 +1,243 @@
+<!-- ═══ SKIP LINKS (global - colocar no app.component.html) ═══ -->
+<!-- <a href="#main-content" class="ple-skip-link">Ir para conteúdo principal</a> -->
+<!-- <a href="#sidebar-nav" class="ple-skip-link ple-skip-link--second">Ir para menu de navegação</a> -->
+
+<!-- ═══ LIVE REGION ═══ -->
+<div class="sr-only"
+     aria-live="polite"
+     aria-atomic="true"
+     role="status">
+  {{ liveRegionText }}
+</div>
+
+<!-- ═══ SIDEBAR CONTAINER ═══ -->
+<div class="ple-sidebar"
+     [class.ple-sidebar--collapsed]="isCollapsed && !isMobile"
+     [class.ple-sidebar--mobile]="isMobile"
+     [class.ple-sidebar--mobile-open]="mobileMenuOpen"
+     [class.ple-sidebar--green]="greenTheme"
+     [class.ple-sidebar--hc]="highContrast">
+
+  <!-- ═══ LOGO ═══ -->
+  <div class="ple-sidebar__logo-area" *ngIf="!isMobile">
+    <a routerLink="/" class="ple-sidebar__logo">
+      <!-- Brasão SVG -->
+      <svg role="img" aria-label="Brasão da Câmara Legislativa do DF"
+           width="44" height="44" viewBox="0 0 36 44" class="ple-sidebar__brasao">
+        <rect x="2" y="4" width="32" height="36" rx="3" fill="#C8A415"/>
+        <rect x="5" y="7" width="26" height="30" rx="2" fill="currentColor"/>
+        <text x="18" y="28" text-anchor="middle" font-size="16" font-weight="700"
+              fill="#C8A415">CL</text>
+      </svg>
+      <div class="ple-sidebar__logo-text" *ngIf="!isCollapsed">
+        <span class="ple-sidebar__logo-title">CÂMARA LEGISLATIVA</span>
+        <span class="ple-sidebar__logo-subtitle">DISTRITO FEDERAL</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- Divider -->
+  <div class="ple-sidebar__divider" role="separator" aria-hidden="true"
+       *ngIf="!isMobile"></div>
+
+  <!-- ═══ SEARCH ═══ -->
+  <a class="ple-sidebar__search"
+     (click)="onSearchClick(); $event.preventDefault()"
+     href="#"
+     [attr.aria-label]="'Pesquisa avançada'">
+    <i class="pi pi-search ple-sidebar__search-icon" aria-hidden="true"></i>
+    <span class="ple-sidebar__search-label"
+          [class.sr-only]="isCollapsed && !isMobile">Pesquisar</span>
+  </a>
+
+  <!-- Divider -->
+  <div class="ple-sidebar__divider" role="separator" aria-hidden="true"></div>
+
+  <!-- ═══ NAV ═══ -->
+  <nav id="sidebar-nav"
+       class="ple-sidebar__nav"
+       aria-label="Menu administrativo principal"
+       #sidebarNav>
+    <ul class="ple-sidebar__menu-list"
+        role="tree"
+        aria-label="Menu de navegação">
+
+      <ng-container *ngFor="let item of menuItems; let i = index; trackBy: trackByMenuId">
+        <li *ngIf="item.visible !== false"
+            class="ple-sidebar__nav-group"
+            role="none">
+
+          <!-- ═══ ITEM COM FILHOS → <button> ═══ -->
+          <ng-container *ngIf="item.items && item.items.length > 0">
+            <button
+              [id]="'menuitem-' + item.menuId"
+              type="button"
+              role="treeitem"
+              [ngClass]="getNavItemClasses(item)"
+              [attr.aria-expanded]="isCollapsed && !isMobile
+                ? (openFlyoutId === item.menuId)
+                : isSubmenuOpen(item)"
+              [attr.aria-controls]="'submenu-' + item.menuId"
+              [attr.aria-label]="(isCollapsed && !isMobile) ? item.label : null"
+              [tabIndex]="0"
+              (click)="isCollapsed && !isMobile
+                ? toggleFlyout(item, $event.currentTarget)
+                : toggleSubmenu(item)"
+              (keydown)="onKeyDown($event, item, i)"
+              #navItemBtn>
+              <span class="ple-nav-item__left">
+                <i [class]="item.icon" class="ple-nav-item__icon" aria-hidden="true"></i>
+                <span class="ple-nav-item__label"
+                      [class.sr-only]="isCollapsed && !isMobile">
+                  {{ item.label }}
+                </span>
+              </span>
+              <span class="ple-nav-item__chevron"
+                    [class.sr-only]="isCollapsed && !isMobile"
+                    [class.ple-nav-item__chevron--open]="isSubmenuOpen(item)">
+                <i class="pi pi-chevron-down" aria-hidden="true"></i>
+              </span>
+            </button>
+
+            <!-- ═══ SUBMENU (expandido) ═══ -->
+            <ul *ngIf="!isCollapsed || isMobile"
+                [id]="'submenu-' + item.menuId"
+                class="ple-sidebar__sub-items"
+                role="group"
+                [attr.aria-label]="item.label"
+                [@submenuAnimation]="getSubmenuAnimationState(item)">
+              <li *ngFor="let child of item.items; trackBy: trackByMenuId"
+                  role="none">
+                <a *ngIf="!child.isCommand && child.visible !== false"
+                   [id]="'menuitem-' + child.menuId"
+                   [routerLink]="child.routerLink"
+                   role="treeitem"
+                   [ngClass]="getSubItemClasses(child)"
+                   [attr.aria-current]="isActive(child) ? 'page' : null"
+                   [tabIndex]="0"
+                   (click)="onMenuItemClick(child, $event)"
+                   (keydown)="onKeyDown($event, child, i)">
+                  <span class="ple-sub-item__indicator" aria-hidden="true"></span>
+                  <span class="ple-sub-item__label">{{ child.label }}</span>
+                </a>
+                <!-- Command sub-item (não navega, executa função) -->
+                <button *ngIf="child.isCommand && child.visible !== false"
+                   [id]="'menuitem-' + child.menuId"
+                   type="button"
+                   role="treeitem"
+                   [ngClass]="getSubItemClasses(child)"
+                   [tabIndex]="0"
+                   (click)="onMenuItemClick(child, $event)"
+                   (keydown)="onKeyDown($event, child, i)">
+                  <span class="ple-sub-item__indicator" aria-hidden="true"></span>
+                  <span class="ple-sub-item__label">{{ child.label }}</span>
+                </button>
+              </li>
+            </ul>
+
+            <!-- ═══ FLYOUT (colapsado) ═══ -->
+            <div *ngIf="isCollapsed && !isMobile && openFlyoutId === item.menuId"
+                 [id]="'submenu-' + item.menuId"
+                 class="ple-sidebar__flyout"
+                 [class.ple-sidebar__flyout--up]="flyoutOpenUp"
+                 [ngStyle]="flyoutStyle"
+                 role="menu"
+                 [attr.aria-label]="item.label"
+                 [@flyoutAnimation]
+                 #flyoutContainer>
+              <div class="ple-sidebar__flyout-header">{{ item.label }}</div>
+              <a *ngFor="let child of item.items; trackBy: trackByMenuId"
+                 class="ple-sidebar__flyout-item"
+                 [class.ple-sidebar__flyout-item--active]="isActive(child)"
+                 [routerLink]="child.routerLink"
+                 role="menuitem"
+                 [attr.aria-current]="isActive(child) ? 'page' : null"
+                 (click)="onFlyoutItemClick(item, child, $event)"
+                 *ngIf="child.visible !== false && !child.isCommand">
+                <span class="ple-sidebar__flyout-indicator" aria-hidden="true"></span>
+                {{ child.label }}
+              </a>
+              <button *ngFor="let child of item.items; trackBy: trackByMenuId"
+                 class="ple-sidebar__flyout-item"
+                 [class.ple-sidebar__flyout-item--active]="isActive(child)"
+                 type="button"
+                 role="menuitem"
+                 (click)="onFlyoutItemClick(item, child, $event)"
+                 *ngIf="child.visible !== false && child.isCommand">
+                {{ child.label }}
+              </button>
+            </div>
+
+            <!-- ═══ TOOLTIP (colapsado, sem filhos) ═══ -->
+          </ng-container>
+
+          <!-- ═══ ITEM SEM FILHOS → <a> ═══ -->
+          <ng-container *ngIf="!item.items || item.items.length === 0">
+            <a *ngIf="!item.isCommand"
+               [id]="'menuitem-' + item.menuId"
+               [routerLink]="item.routerLink"
+               role="treeitem"
+               [ngClass]="getNavItemClasses(item)"
+               [attr.aria-current]="isActive(item) ? 'page' : null"
+               [attr.aria-label]="(isCollapsed && !isMobile) ? item.label : null"
+               [attr.aria-describedby]="(isCollapsed && !isMobile) ? 'tooltip-' + item.menuId : null"
+               [tabIndex]="0"
+               [pTooltip]="(isCollapsed && !isMobile) ? item.label : null"
+               tooltipPosition="right"
+               (click)="onMenuItemClick(item, $event)"
+               (keydown)="onKeyDown($event, item, i)">
+              <span class="ple-nav-item__left">
+                <i [class]="item.icon" class="ple-nav-item__icon" aria-hidden="true"></i>
+                <span class="ple-nav-item__label"
+                      [class.sr-only]="isCollapsed && !isMobile">
+                  {{ item.label }}
+                </span>
+              </span>
+            </a>
+            <!-- Command item (sem routerLink) -->
+            <button *ngIf="item.isCommand"
+               [id]="'menuitem-' + item.menuId"
+               type="button"
+               role="treeitem"
+               [ngClass]="getNavItemClasses(item)"
+               [attr.aria-label]="(isCollapsed && !isMobile) ? item.label : null"
+               [tabIndex]="0"
+               [pTooltip]="(isCollapsed && !isMobile) ? item.label : null"
+               tooltipPosition="right"
+               (click)="onMenuItemClick(item, $event)"
+               (keydown)="onKeyDown($event, item, i)">
+              <span class="ple-nav-item__left">
+                <i [class]="item.icon" class="ple-nav-item__icon" aria-hidden="true"></i>
+                <span class="ple-nav-item__label"
+                      [class.sr-only]="isCollapsed && !isMobile">
+                  {{ item.label }}
+                </span>
+              </span>
+            </button>
+          </ng-container>
+
+        </li>
+      </ng-container>
+    </ul>
+  </nav>
+
+  <!-- ═══ USER PANEL (mobile only) ═══ -->
+  <div class="ple-sidebar__user-panel" *ngIf="isMobile && mobileMenuOpen">
+    <div class="ple-sidebar__divider" role="separator" aria-hidden="true"></div>
+    <div class="ple-sidebar__user-info">
+      <div class="ple-sidebar__user-avatar" aria-hidden="true">
+        <i class="pi pi-user"></i>
+      </div>
+      <div class="ple-sidebar__user-details">
+        <span class="ple-sidebar__user-name">{{ userName }}</span>
+        <span class="ple-sidebar__user-login">{{ userLogin }}</span>
+      </div>
+    </div>
+    <button class="ple-sidebar__logout-btn"
+            (click)="onLogout()"
+            aria-label="Sair do sistema">
+      <i class="pi pi-sign-out" aria-hidden="true"></i>
+      <span>Sair</span>
+    </button>
+  </div>
+</div>
